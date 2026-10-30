@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fauzi AeroPhysics Lab – Aircraft Take-Off Simulation</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="dark">
+  <div class="app-container">
+    
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-icon">✈️</div>
+        <div>
+          <h1>Fauzi AeroPhysics Lab – Aircraft Take-Off Simulation</h1>
+          <p>3D Kinematics &bull; Equations of Uniformly Accelerated Motion (u = 0, a = const)</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- 3D Aircraft Model Inspector Button -->
+        <a href="aircraft_model_viewer.html" class="btn btn-primary" title="Open 360° 3D Aircraft Model Showcase">
+          🔍 Inspect 3D Model
+        </a>
+
+        <!-- Aircraft Preset Selector -->
+        <div class="select-wrapper">
+          <select id="preset-select" aria-label="Select Aircraft Preset">
+            <option value="cessna">Cessna 172 Skyhawk (Light Trainer)</option>
+            <option value="atr72">ATR 72 Turboprop (Regional)</option>
+            <option value="b737" selected>Boeing 737-800 (Airliner)</option>
+            <option value="a380">Airbus A380-800 (Heavy Superjumbo)</option>
+            <option value="f16">F-16 Falcon (Afterburner)</option>
+            <option value="catapult">Carrier Steam Catapult Launch</option>
+            <option value="custom">-- Custom Parameters --</option>
+          </select>
+        </div>
+
+        <!-- Unit Toggle -->
+        <div class="select-wrapper">
+          <select id="unit-select" aria-label="Select Velocity Unit">
+            <option value="ms" selected>Units: m/s</option>
+            <option value="kmh">Units: km/h</option>
+            <option value="kts">Units: Knots (kts)</option>
+          </select>
+        </div>
+
+        <!-- Sound & Theme Controls -->
+        <button id="btn-sound" class="btn" title="Toggle audio synthesizer (M)">🔈 Sound: OFF</button>
+        <button id="btn-theme" class="btn" title="Toggle Light/Dark Theme">☀️ Light</button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="tabs-header" aria-label="Simulation Views">
+      <button class="tab-btn active" data-tab="tab-sim">🛫 Interactive Simulation & Graphs</button>
+      <button class="tab-btn" data-tab="tab-equations">📐 SUVAT Derivations & Theory</button>
+      <button class="tab-btn" data-tab="tab-quiz">🎯 Student Challenge Mode</button>
+      <button class="tab-btn" data-tab="tab-data">📊 Experiment Data Logger</button>
+    </nav>
+
+    <!-- TAB 1: Main Simulation & Graphs -->
+    <main id="tab-sim" class="tab-content active">
+      <div class="main-grid">
+        
+        <!-- Left Column: Controls & Parameters -->
+        <aside class="card" aria-label="Physics Controls">
+          <div class="card-title">
+            <span>Takeoff Parameters</span>
+            <span class="var-badge badge-u">u = 0 m/s (From Rest)</span>
+          </div>
+          <p class="card-subtitle">Adjust acceleration and target rotation speed to observe required time and distance.</p>
+
+          <!-- Acceleration Control (a) -->
+          <div class="control-group">
+            <div class="control-header">
+              <label for="slider-a" class="control-label">
+                <span class="var-badge badge-a">a</span> Acceleration:
+              </label>
+              <div class="num-input-wrap">
+                <input type="number" id="input-a" min="0.2" max="35.0" step="0.1" value="2.2" aria-label="Acceleration value">
+                <span class="num-unit">m/s²</span>
+              </div>
+            </div>
+            <div class="control-input-row">
+              <input type="range" id="slider-a" class="slider-input" min="0.2" max="35.0" step="0.1" value="2.2">
+            </div>
+            <div class="control-meta">
+              <span>Low (0.5 m/s²)</span>
+              <span>Nominal (2-3)</span>
+              <span>Catapult (30+)</span>
+            </div>
+          </div>
+
+          <!-- Target Velocity Control (v) -->
+          <div class="control-group">
+            <div class="control-header">
+              <label for="slider-v" class="control-label">
+                <span class="var-badge badge-v">v</span> Take-off Speed (V<sub>r</sub>):
+              </label>
+              <div class="num-input-wrap">
+                <input type="number" id="input-v" min="10" max="130" step="1" value="75" aria-label="Target Velocity value">
+                <span class="num-unit">m/s</span>
+              </div>
+            </div>
+            <div class="control-input-row">
+              <input type="range" id="slider-v" class="slider-input" min="10" max="130" step="1" value="75">
+            </div>
+            <div class="control-meta">
+              <span>Trainer (28 m/s)</span>
+              <span>Jet (75 m/s)</span>
+              <span>High (120 m/s)</span>
+            </div>
+          </div>
+
+          <!-- Runway Length Limit (Safety Factor) -->
+          <div class="control-group">
+            <div class="control-header">
+              <label for="runway-limit-select" class="control-label">
+                <span class="var-badge badge-s">s<sub>max</sub></span> Runway Available:
+              </label>
+              <div class="select-wrapper">
+                <select id="runway-limit-select" aria-label="Select Runway Limit">
+                  <option value="0" selected>Automatic / Unlimited</option>
+                  <option value="800">Short Runway (800 m)</option>
+                  <option value="1500">Medium Runway (1,500 m)</option>
+                  <option value="2500">Long Runway (2,500 m)</option>
+                  <option value="4000">Major Hub (4,000 m)</option>
+                </select>
+              </div>
+            </div>
+            <div class="control-meta">
+              <span>Tests if runway is long enough to prevent overrun!</span>
+            </div>
+          </div>
+
+          <!-- Simulation Playback Bar -->
+          <div class="playback-bar">
+            <div class="playback-buttons">
+              <button id="btn-play" class="btn btn-primary" title="Play or Pause Simulation (Space)">▶ Play</button>
+              <button id="btn-step-back" class="btn btn-icon" title="Step Back 0.2s ([)">⏮</button>
+              <button id="btn-step-fwd" class="btn btn-icon" title="Step Forward 0.2s (])">⏭</button>
+              <button id="btn-reset" class="btn" title="Reset Current Cycle to Start (R)">↺ Reset</button>
+              <button id="btn-restart-cycles" class="btn btn-sm" title="Restart 10-Cycle Experiment from Cycle 1">🔄 Restart 10 Cycles</button>
+              
+              <div class="select-wrapper">
+                <select id="speed-select" aria-label="Playback Speed">
+                  <option value="0.25">0.25x (Super Slow)</option>
+                  <option value="0.5">0.5x (Slow-Mo)</option>
+                  <option value="1.0" selected>1.0x (Real-time)</option>
+                  <option value="2.0">2.0x (Fast)</option>
+                  <option value="4.0">4.0x (Super Fast)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Auto-Repeat 10 Cycles Toggle -->
+            <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 4px; border-top: 1px solid var(--border-color);">
+              <label style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer;">
+                <input type="checkbox" id="check-auto-repeat" checked>
+                <span>Automatic 10-Cycle Repetition</span>
+              </label>
+              <span id="cycle-status-label" style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--accent-cyan); font-weight: 700;">Cycle 1 / 10</span>
+            </div>
+
+            <div class="playback-scrubber">
+              <span class="kbd-hint">0s</span>
+              <input type="range" id="sim-scrubber" class="slider-input scrubber-slider" min="0" max="1000" value="0" aria-label="Timeline Scrubber">
+              <span class="kbd-hint">End</span>
+            </div>
+          </div>
+
+          <!-- Quick Keyboard Legend -->
+          <div class="control-meta" style="margin-top: 4px;">
+            <span><span class="kbd-hint">Space</span> Play/Pause</span>
+            <span><span class="kbd-hint">R</span> Reset</span>
+            <span><span class="kbd-hint">[ / ]</span> Step</span>
+            <span><span class="kbd-hint">M</span> Mute</span>
+          </div>
+        </aside>
+
+        <!-- Right Column: Visual Simulation Stage & Telemetry -->
+        <section style="display: flex; flex-direction: column; gap: 16px;">
+          
+          <!-- Simulation Canvas Card -->
+          <div class="card sim-stage-card">
+            
+            <!-- Floating Heads-Up Display (HUD) -->
+            <div class="sim-hud-top">
+              <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <!-- Flight Status Pill -->
+                <div class="hud-pill">
+                  <div id="hud-status-badge" class="hud-status ready">
+                    <span class="status-dot"></span>
+                    <span id="hud-status-text">Stationary at Runway Threshold</span>
+                  </div>
+                </div>
+
+                <!-- Cycle Counter Pill & Dots -->
+                <div class="hud-cycle-pill">
+                  <span id="hud-cycle-text" style="font-weight: 700; color: #a5b4fc;">CYCLE 1 / 10</span>
+                  <div id="cycle-dots-container" class="cycle-dots-wrap">
+                    <span class="cycle-dot active" title="Cycle 1"></span>
+                    <span class="cycle-dot" title="Cycle 2"></span>
+                    <span class="cycle-dot" title="Cycle 3"></span>
+                    <span class="cycle-dot" title="Cycle 4"></span>
+                    <span class="cycle-dot" title="Cycle 5"></span>
+                    <span class="cycle-dot" title="Cycle 6"></span>
+                    <span class="cycle-dot" title="Cycle 7"></span>
+                    <span class="cycle-dot" title="Cycle 8"></span>
+                    <span class="cycle-dot" title="Cycle 9"></span>
+                    <span class="cycle-dot" title="Cycle 10"></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- View Mode & Camera Toggles -->
+              <div style="display: flex; gap: 8px; pointer-events: auto; flex-wrap: wrap;">
+                <!-- 3D vs 2D Toggle -->
+                <div class="camera-toggles">
+                  <button id="btn-view-3d" class="cam-btn active" title="Switch to 3D Photorealistic Simulation">🎮 3D View</button>
+                  <button id="btn-view-2d" class="cam-btn" title="Switch to 2D Technical Schematic">📐 2D HUD</button>
+                </div>
+
+                <!-- 3D Camera Angles -->
+                <div id="cam-controls-3d" class="camera-toggles">
+                  <button id="cam-chase-3d" class="cam-btn active" title="Third-person Chase Cam">🎥 Chase</button>
+                  <button id="cam-cockpit-3d" class="cam-btn" title="Pilot Cockpit Point of View">👨‍✈️ Cockpit</button>
+                  <button id="cam-tower-3d" class="cam-btn" title="Runway Control Tower Cam">🗼 Tower</button>
+                  <button id="cam-wing-3d" class="cam-btn" title="Wing & Engine View">🪽 Wing</button>
+                </div>
+
+                <!-- 2D Camera Angles (hidden when in 3D) -->
+                <div id="cam-controls-2d" class="camera-toggles" style="display: none;">
+                  <button id="cam-chase" class="cam-btn active" title="Follow Aircraft Smoothly">🎥 Follow Cam</button>
+                  <button id="cam-pano" class="cam-btn" title="Bird's Eye Entire Runway View">🔭 Panoramic View</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 10-Cycle Completion Celebratory Banner Modal -->
+            <div id="cycle-completion-modal" class="cycle-completion-modal">
+              <div style="font-size: 2.2rem;">🎉</div>
+              <h3 style="font-size: 1.15rem; font-weight: 700; color: #10b981;">All 10 Take-Off Cycles Completed!</h3>
+              <p style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.5;">
+                The aeroplane has successfully demonstrated 10 full cycles of constant acceleration along the runway followed by extended climb-out to altitude.
+              </p>
+              <div id="completion-summary" style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; font-family: var(--font-mono); font-size: 0.78rem; text-align: left;">
+                <div>&bull; Cycles Completed: <strong style="color: #10b981;">10 / 10</strong></div>
+                <div>&bull; Total Runway Ground Rolls: <strong id="summary-runways">12.78 km</strong></div>
+                <div>&bull; Peak Altitude Achieved: <strong id="summary-alt">245 m (804 ft)</strong></div>
+              </div>
+              <button id="btn-modal-restart" class="btn btn-primary" style="justify-content: center; font-weight: 700; margin-top: 4px;">
+                🔄 Restart 10-Cycle Experiment
+              </button>
+            </div>
+
+            <!-- Canvas Viewports -->
+            <canvas id="sim-canvas-3d" class="sim-canvas"></canvas>
+            <canvas id="sim-canvas" class="sim-canvas" style="display: none;"></canvas>
+          </div>
+
+          <!-- Telemetry Metrics Dashboard (Synchronized 6-Card Grid) -->
+          <div class="telemetry-grid">
+            
+            <!-- Card 1: Cycle Counter -->
+            <div class="telemetry-card">
+              <div class="telemetry-title">
+                <span>Cycle Counter</span>
+                <span class="var-badge badge-cycle">Cycle</span>
+              </div>
+              <div id="metric-cycle" class="telemetry-val" style="color: #a5b4fc;">1 <span class="num-unit">/ 10</span></div>
+              <div id="metric-cycle-sub" class="telemetry-sub">Auto 10-Cycle Mode</div>
+            </div>
+
+            <!-- Card 2: Elapsed Time -->
+            <div class="telemetry-card">
+              <div class="telemetry-title">
+                <span>Elapsed Time</span>
+                <span class="var-badge badge-t">t</span>
+              </div>
+              <div id="metric-time" class="telemetry-val">0.0 <span class="num-unit">/ 34.1 s</span></div>
+              <div id="metric-time-sub" class="telemetry-sub">Runway: t = v / a</div>
+            </div>
+
+            <!-- Card 3: Horizontal Distance -->
+            <div class="telemetry-card">
+              <div class="telemetry-title">
+                <span>Horizontal Distance</span>
+                <span class="var-badge badge-s">s<sub>x</sub></span>
+              </div>
+              <div id="metric-dist" class="telemetry-val">0.0 <span class="num-unit">m</span></div>
+              <div id="metric-dist-sub" class="telemetry-sub">Runway: 1,278 m | Air: 0 m</div>
+            </div>
+
+            <!-- Card 4: Altitude (Height Above Ground) -->
+            <div class="telemetry-card">
+              <div class="telemetry-title">
+                <span>Altitude (AGL)</span>
+                <span class="var-badge badge-h">Altitude</span>
+              </div>
+              <div id="metric-alt" class="telemetry-val" style="color: #38bdf8;">0.0 <span class="num-unit">m</span></div>
+              <div id="metric-alt-sub" class="telemetry-sub">0 ft | Climb: 0.0 m/s</div>
+            </div>
+
+            <!-- Card 5: Airspeed / Velocity -->
+            <div class="telemetry-card">
+              <div class="telemetry-title">
+                <span>Airspeed</span>
+                <span class="var-badge badge-v">v</span>
+              </div>
+              <div id="metric-speed" class="telemetry-val">0.0 <span class="num-unit">m/s</span></div>
+              <div id="metric-speed-sub" class="telemetry-sub">Rotation Vr: 75.0 m/s</div>
+            </div>
+
+            <!-- Card 6: Acceleration & G-Force -->
+            <div class="telemetry-card">
+              <div class="telemetry-title">
+                <span>Acceleration / G-Force</span>
+                <span class="var-badge badge-a">a</span>
+              </div>
+              <div id="metric-accel" class="telemetry-val">2.20 <span class="num-unit">m/s²</span></div>
+              <div id="metric-gforce" class="telemetry-sub">0.22 g forward</div>
+            </div>
+
+          </div>
+
+          <!-- Synchronized Kinematic Graphs -->
+          <div class="card">
+            <div class="card-title">
+              <span>Synchronized Kinematic Graphs</span>
+              <span class="card-subtitle">Click or drag anywhere on the graphs to scrub through time!</span>
+            </div>
+
+            <div class="graphs-grid">
+              <!-- Displacement vs Time (s-t) -->
+              <div class="graph-box">
+                <div class="graph-header">
+                  <span class="graph-title" style="color: #a78bfa;">Displacement s(t)</span>
+                  <span class="graph-formula">s = &frac12;at²</span>
+                </div>
+                <canvas id="graph-s" class="graph-canvas"></canvas>
+                <div class="graph-annotation">Parabolic curve &bull; Slope = Velocity v</div>
+              </div>
+
+              <!-- Velocity vs Time (v-t) -->
+              <div class="graph-box">
+                <div class="graph-header">
+                  <span class="graph-title" style="color: #34d399;">Velocity v(t)</span>
+                  <span class="graph-formula">v = at</span>
+                </div>
+                <canvas id="graph-v" class="graph-canvas"></canvas>
+                <div class="graph-annotation">Linear slope = a &bull; Area under curve = Distance s</div>
+              </div>
+
+              <!-- Acceleration vs Time (a-t) -->
+              <div class="graph-box">
+                <div class="graph-header">
+                  <span class="graph-title" style="color: #fbbf24;">Acceleration a(t)</span>
+                  <span class="graph-formula">a = const</span>
+                </div>
+                <canvas id="graph-a" class="graph-canvas"></canvas>
+                <div class="graph-annotation">Constant horizontal line &bull; Area = &Delta;v</div>
+              </div>
+            </div>
+          </div>
+
+        </section>
+      </div>
+    </main>
+
+    <!-- TAB 2: Equations & Theoretical Derivations -->
+    <section id="tab-equations" class="tab-content card">
+      <div class="card-title">
+        <span>Equations of Uniformly Accelerated Motion (SUVAT)</span>
+        <span class="card-subtitle">Live numbers dynamically substituted from your current simulation parameters</span>
+      </div>
+
+      <div class="equations-grid">
+        
+        <!-- Equation 1: Time -->
+        <div class="eq-card">
+          <div class="eq-name">1. Velocity-Time Relation (Finding Takeoff Time t)</div>
+          <div class="eq-formula">v = u + at &implies; t = &frac{v - u}{a}</div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">
+            Starting from rest (<span class="var-badge badge-u">u = 0</span>), required takeoff time is directly proportional to target speed and inversely proportional to acceleration:
+          </p>
+          <div id="eq-subst-time" class="eq-subst">
+            t = (75.0 - 0) / 2.2 = 34.09 s
+          </div>
+        </div>
+
+        <!-- Equation 2: Distance from Time -->
+        <div class="eq-card">
+          <div class="eq-name">2. Position-Time Relation (Runway Distance s)</div>
+          <div class="eq-formula">s = ut + &frac12;at² &implies; s = &frac12;at²</div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">
+            Because the aeroplane starts from rest, distance is quadratic with time. If time doubles, distance quadruples:
+          </p>
+          <div id="eq-subst-dist1" class="eq-subst">
+            s = 0 + &frac12;(2.2)(34.09)² = 1,278.4 m
+          </div>
+        </div>
+
+        <!-- Equation 3: Distance from Velocity Squared (Torricelli) -->
+        <div class="eq-card">
+          <div class="eq-name">3. Torricelli's Equation (Independent of Time)</div>
+          <div class="eq-formula">v² = u² + 2as &implies; s = &frac{v² - u²}{2a} = &frac{v²}{2a}</div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">
+            Crucial engineering formula: Doubling takeoff speed requires <strong>4&times;</strong> the runway distance at the same engine acceleration!
+          </p>
+          <div id="eq-subst-dist2" class="eq-subst">
+            s = (75.0)² / (2 &times; 2.2) = 1,278.4 m
+          </div>
+        </div>
+
+        <!-- Equation 4: Average Speed Formulation -->
+        <div class="eq-card">
+          <div class="eq-name">4. Average Velocity & Geometric Meaning</div>
+          <div class="eq-formula">v<sub>avg</sub> = &frac{u + v}{2} = &frac{v}{2}, &emsp; s = v<sub>avg</sub> &times; t</div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">
+            In linear acceleration, average velocity is exactly half of the final takeoff speed. Distance corresponds directly to the triangular area under the v-t graph:
+          </p>
+          <div id="eq-subst-avg" class="eq-subst">
+            v_avg = 37.5 m/s &implies; s = 37.5 &times; 34.09 = 1,278.4 m
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Real-world Aviation Context Note -->
+      <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; margin-top: 10px;">
+        <h3 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 6px;">✈️ Aeronautical Engineering Context: V<sub>1</sub>, V<sub>r</sub>, and V<sub>2</sub></h3>
+        <p style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.6;">
+          In real commercial aviation, three critical speeds govern takeoff along a runway:
+          <br>&bull; <strong>V<sub>1</sub> (Decision Speed):</strong> The maximum speed at which the pilots can abort the takeoff and safely stop on the remaining runway.
+          <br>&bull; <strong>V<sub>r</sub> (Rotation Speed):</strong> The target velocity modeled in this simulator where the pilot pulls back on the control column to pitch the nose up.
+          <br>&bull; <strong>V<sub>2</sub> (Takeoff Safety Speed):</strong> The minimum climb speed that ensures obstacle clearance even if one engine fails after liftoff.
+        </p>
+      </div>
+    </section>
+
+    <!-- TAB 3: Student Challenge Mode -->
+    <section id="tab-quiz" class="tab-content card">
+      <div class="card-title">
+        <span>Student Kinematics Challenge</span>
+        <span class="card-subtitle">Solve the physics problem with SUVAT formulas, then launch the simulation to verify!</span>
+      </div>
+
+      <div class="quiz-card">
+        <p id="quiz-prompt" class="quiz-prompt">Loading problem...</p>
+
+        <div class="quiz-inputs">
+          <label for="quiz-input" style="font-size: 0.85rem; font-weight: 600;">Your Calculated Value:</label>
+          <div class="num-input-wrap" style="width: 140px;">
+            <input type="number" id="quiz-input" step="0.1" placeholder="Enter value">
+            <span id="quiz-unit" class="num-unit">s</span>
+          </div>
+          <button id="btn-quiz-check" class="btn btn-primary">Check Answer</button>
+          <button id="btn-quiz-load" class="btn btn-success" title="Put these values into the simulator">Load into Simulator 🛫</button>
+          <button id="btn-quiz-next" class="btn">Next Problem ➔</button>
+        </div>
+
+        <div id="quiz-feedback" class="quiz-feedback"></div>
+      </div>
+    </section>
+
+    <!-- TAB 4: Data Logger & CSV Export -->
+    <section id="tab-data" class="tab-content card">
+      <div class="card-title">
+        <span>Simulation Run History & Lab Report Data</span>
+        <div style="display: flex; gap: 8px;">
+          <button id="btn-log-run" class="btn btn-primary btn-sm">+ Log Current Run</button>
+          <button id="btn-export-csv" class="btn btn-success btn-sm">Export CSV</button>
+          <button id="btn-clear-log" class="btn btn-danger btn-sm">Clear History</button>
+        </div>
+      </div>
+
+      <p class="card-subtitle">Record multiple test configurations with varying acceleration and takeoff velocity for scientific analysis and physics lab reports.</p>
+
+      <div class="data-table-wrap">
+        <table id="data-table" class="data-table">
+          <thead>
+            <tr>
+              <th>Run</th>
+              <th>Configuration</th>
+              <th>Acceleration a (m/s²)</th>
+              <th>Takeoff Speed v (m/s)</th>
+              <th>Time t (s)</th>
+              <th>Distance s (m)</th>
+              <th>G-Force (g)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Populated via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- App Footer -->
+  </div>
+
+  <script src="three.min.js"></script>
+  <script src="aeroplane3d.js"></script>
+  <script src="sim.js"></script>
+</body>
+</html>
